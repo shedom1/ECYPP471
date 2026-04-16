@@ -24,6 +24,7 @@ a{color:var(--blue2)}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
 .field input,.field select{width:100%;min-height:34px;border:1px solid #c8d4e0;border-radius:8px;background:#fff;padding:6px 8px;font-size:12px;color:var(--text)}
+.field select[multiple]{min-height:92px;padding:4px 6px}
 .toolbar-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 button{border:1px solid #c7d3df;background:#fff;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer}
 button.primary{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(23,58,92,.18)}
@@ -205,10 +206,10 @@ thead th,
       <div class="field"><label for="stateFilter">State</label><select id="stateFilter"><option value="">All states</option></select></div>
       <div class="field"><label for="statusFilter">Application Status</label><select id="statusFilter"><option value="">All application statuses</option></select></div>
       <div class="field"><label for="providerFilter">Provider</label><select id="providerFilter"><option value="">All providers</option></select></div>
-      <div class="field"><label for="makeFilter">Make</label><select id="makeFilter"><option value="">All makes</option></select></div>
+      <div class="field"><label for="makeFilter">Make</label><select id="makeFilter" multiple size="4" title="Hold Ctrl or Command to select multiple makes"></select><div class="small-note">Hold Ctrl or Command to select multiple makes</div></div>
       <div class="field"><label for="entityTypeFilter">Participant Type</label><select id="entityTypeFilter"><option value="">All participant types</option></select></div>
       <div class="field"><label for="versionFilter">Version</label><select id="versionFilter"><option value="">All versions</option><option value="Original">Original only</option><option value="Revised">Revised only</option></select></div>
-      <div class="field"><label for="sortBy">Sort</label><select id="sortBy"><option value="amount_desc">Highest eligible amount</option><option value="participant_asc">Participant A–Z</option><option value="state_asc">State A–Z</option><option value="status_asc">Status A–Z</option><option value="version_asc">Version</option></select></div>
+      <div class="field"><label for="sortBy">Sort</label><select id="sortBy"><option value="amount_desc">Cost High to Low</option><option value="amount_asc">Cost Low to High</option><option value="participant_asc">Participant A–Z</option><option value="participant_desc">Participant Z–A</option><option value="state_asc">State A–Z</option><option value="state_desc">State Z–A</option><option value="status_asc">Status A–Z</option><option value="status_desc">Status Z–A</option><option value="version_asc">Version</option></select></div>
     </div>
   </section>
 
@@ -224,7 +225,7 @@ thead th,
 
   <div class="status-row">
     <div id="resultText">0 cards shown</div>
-    <div class="small-note">Provider defaults to Solutionz when present in the loaded data. Use the Version and Make filters to narrow the visible cards. Line items are sorted by line number by default.</div>
+    <div class="small-note">Provider defaults to Solutionz when present in the loaded data. Use the Version filter and the multi-select Make filter to narrow the visible cards. Line items are sorted by line number by default.</div>
   </div>
 
   <section id="cards" class="cards"></section>
@@ -482,14 +483,21 @@ function populateFilters(){
     ['stateFilter', unique(rows.map(r=>r.participantState)), 'All states'],
     ['statusFilter', unique(state.groups.map(g=>g.applicationStatusLabel)), 'All application statuses'],
     ['providerFilter', unique(rows.map(r=>r.provider)), 'All providers'],
-    ['makeFilter', unique(rows.map(r=>r.lineMake)), 'All makes'],
+    ['makeFilter', unique(rows.map(r=>r.lineMake)), ''],
     ['entityTypeFilter', unique(rows.map(r=>r.participantType)), 'All participant types'],
     ['versionFilter', unique(state.groups.map(g=>g.versionLabel)), 'All versions']
   ];
   maps.forEach(([id,vals,first])=>{
-    const sel = el(id); const current = sel.value;
-    sel.innerHTML = `<option value="">${first}</option>` + vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-    sel.value = vals.includes(current) ? current : '';
+    const sel = el(id);
+    if(id === 'makeFilter'){
+      const current = Array.from(sel.selectedOptions || []).map(o => o.value);
+      sel.innerHTML = vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      Array.from(sel.options).forEach(opt => { opt.selected = current.includes(opt.value); });
+    } else {
+      const current = sel.value;
+      sel.innerHTML = `<option value="">${first}</option>` + vals.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+      sel.value = vals.includes(current) ? current : '';
+    }
   });
   const providerOptions = unique(rows.map(r=>r.provider));
   if(!curProvider){
@@ -502,7 +510,7 @@ function applyFilters(){
   const stateVal = el('stateFilter').value;
   const statusVal = el('statusFilter').value;
   const providerVal = el('providerFilter').value;
-  const makeVal = el('makeFilter').value;
+  const makeVals = Array.from(el('makeFilter').selectedOptions || []).map(o => o.value).filter(Boolean);
   const typeVal = el('entityTypeFilter').value;
   const versionVal = el('versionFilter').value;
   const sortBy = el('sortBy').value;
@@ -510,7 +518,7 @@ function applyFilters(){
     if(stateVal && g.state !== stateVal) return false;
     if(statusVal && g.applicationStatusLabel !== statusVal) return false;
     if(providerVal && g.provider !== providerVal) return false;
-    if(makeVal && !g.frns.some(f => f.rows.some(r => r.lineMake === makeVal))) return false;
+    if(makeVals.length && !g.frns.some(f => f.rows.some(r => makeVals.includes(r.lineMake)))) return false;
     if(typeVal && g.participantType !== typeVal) return false;
     if(versionVal && g.versionLabel !== versionVal) return false;
     if(q){
@@ -521,9 +529,13 @@ function applyFilters(){
   });
   groups.sort((a,b)=>{
     if(sortBy==='participant_asc') return a.participant.localeCompare(b.participant);
+    if(sortBy==='participant_desc') return b.participant.localeCompare(a.participant);
     if(sortBy==='state_asc') return a.state.localeCompare(b.state);
+    if(sortBy==='state_desc') return b.state.localeCompare(a.state);
     if(sortBy==='status_asc') return a.applicationStatusLabel.localeCompare(b.applicationStatusLabel);
+    if(sortBy==='status_desc') return b.applicationStatusLabel.localeCompare(a.applicationStatusLabel);
     if(sortBy==='version_asc') return a.versionLabel.localeCompare(b.versionLabel);
+    if(sortBy==='amount_asc') return a.eligibleLineTotal - b.eligibleLineTotal;
     return b.eligibleLineTotal - a.eligibleLineTotal;
   });
   state.filteredGroups = groups;
@@ -1017,7 +1029,13 @@ function enableColumnResize(){
 }
 
 ['searchBox','stateFilter','statusFilter','providerFilter','makeFilter','entityTypeFilter','versionFilter','sortBy'].forEach(id => el(id).addEventListener(id==='searchBox'?'input':'change', applyFilters));
-el('clearBtn').addEventListener('click',()=>{ ['searchBox','stateFilter','statusFilter','providerFilter','makeFilter','entityTypeFilter','versionFilter'].forEach(id=>el(id).value=''); el('sortBy').value='amount_desc'; populateFilters(); applyFilters(); });
+el('clearBtn').addEventListener('click',()=>{
+  ['searchBox','stateFilter','statusFilter','providerFilter','entityTypeFilter','versionFilter'].forEach(id=>el(id).value='');
+  Array.from(el('makeFilter').options || []).forEach(opt => opt.selected = false);
+  el('sortBy').value='amount_desc';
+  populateFilters();
+  applyFilters();
+});
 el('reloadBtn').addEventListener('click', fetchLive);
 el('exportBtn').addEventListener('click', exportCsv);
 el('printBtn').addEventListener('click', ()=> window.print());
