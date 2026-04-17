@@ -182,7 +182,7 @@ thead th,
 <div class="page">
   <section class="hero">
     <h1>E-Rate Cybersecurity Pilot Program Live Viewer</h1>
-    <p>Service-provider card view for the USAC Cybersecurity Pilot FCC Form 471 dataset.</p>
+    <p>Service-provider card view for the USAC Cybersecurity Pilot FCC Form 471 dataset. <a href="https://opendata.usac.org/Other-USAC-Programs/Cybersecurity-Pilot-FCC-Form-471/qr48-4kx4/data_preview" target="_blank" rel="noopener noreferrer">View data source</a>.</p>
   </section>
 
   <section class="toolbar">
@@ -193,7 +193,7 @@ thead th,
       <button id="emailBtn">Email</button>
       <button id="clearBtn">Clear Filters</button>
       <button id="exportBtn">Export Filtered CSV</button>
-      <label class="small-note" style="display:inline-flex;align-items:center;gap:6px;border:1px solid #c7d6e8;padding:6px 10px;border-radius:999px;background:#fbfdff;cursor:pointer"><input id="hideZeroCols" type="checkbox" /> Hide zero columns</label>
+      <label class="small-note" style="display:inline-flex;align-items:center;gap:6px;border:1px solid #c7d6e8;padding:6px 10px;border-radius:999px;background:#fbfdff;cursor:pointer"><input id="hideZeroCols" type="checkbox" checked /> Hide zero columns</label>
       <label for="fileInput" class="small-note" style="display:inline-flex;align-items:center;gap:8px;border:1px dashed #c7d6e8;padding:6px 10px;border-radius:999px;background:#fbfdff;cursor:pointer">Optional Backup Import</label>
       <input id="fileInput" type="file" accept=".json,.csv" style="display:none" />
       <span id="fetchStatus" class="small-note">Not loaded yet. Live load uses browser-friendly USAC endpoints intended for hosted pages.</span>
@@ -204,7 +204,7 @@ thead th,
         <input id="searchBox" type="text" placeholder="Participant name, FRN, make, model, provider, 470 number..." />
       </div>
       <div class="field"><label for="stateFilter">State</label><select id="stateFilter"><option value="">All states</option></select></div>
-      <div class="field"><label for="statusFilter">Application Status</label><select id="statusFilter"><option value="">All application statuses</option></select></div>
+      <div class="field"><label for="statusFilter">Application Status</label><select id="statusFilter"><option value="">All application statuses</option><option value="Committed" selected>Committed</option></select></div>
       <div class="field"><label for="providerFilter">Provider</label><select id="providerFilter"><option value="">All providers</option></select></div>
       <div class="field"><label for="makeFilter">Make</label><select id="makeFilter" multiple size="4" title="Hold Ctrl or Command to select multiple makes"></select><div class="small-note">Hold Ctrl or Command to select multiple makes</div></div>
       <div class="field"><label for="entityTypeFilter">Participant Type</label><select id="entityTypeFilter"><option value="">All participant types</option></select></div>
@@ -267,7 +267,7 @@ function addSourceLog(msg){
   updateDataSourceStatus();
 }
 
-const state = { rawRows: [], rows: [], groups: [], filteredGroups: [], activeEndpoint: '', loadedAt: null, hideZeroCols: false };
+const state = { rawRows: [], rows: [], groups: [], filteredGroups: [], activeEndpoint: '', loadedAt: null, hideZeroCols: true };
 const cardsEl = document.getElementById('cards');
 const fetchStatusEl = document.getElementById('fetchStatus');
 function el(id){ return document.getElementById(id); }
@@ -540,6 +540,8 @@ function applyFilters(){
   });
   state.filteredGroups = groups;
   render();
+el('hideZeroCols').checked = true;
+state.hideZeroCols = true;
 enableColumnResize();
 }
 function render(){
@@ -827,6 +829,12 @@ function loadRows(rawRows, live=false){
     dataSourceState.rows = rawRows.length;
   }
   populateFilters();
+  if(!el('statusFilter').value){
+    const hasCommitted = Array.from(el('statusFilter').options || []).some(o => o.value === 'Committed');
+    if(hasCommitted) el('statusFilter').value = 'Committed';
+  }
+  el('hideZeroCols').checked = true;
+  state.hideZeroCols = true;
   applyFilters();
   updateDataSourceStatus();
   fetchStatusEl.textContent = `${intFmt(state.rows.length)} rows loaded${live ? ' from live source' : ' from imported file'}.`;
