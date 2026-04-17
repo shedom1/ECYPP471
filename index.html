@@ -56,7 +56,7 @@ button.primary{background:var(--blue);border-color:var(--blue);color:#fff;box-sh
 .invoice-header{display:flex;justify-content:space-between;gap:16px;margin-bottom:12px}
 .invoice-title{font-size:22px;font-weight:800}
 .invoice-sub{font-size:12px;line-height:1.35;color:#333}
-.invoice-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 14px}
+.invoice-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 14px}
 .invoice-meta-box{border:1px solid #d6d6d6;padding:8px;border-radius:8px}
 .invoice-meta-box .k{font-size:10px;font-weight:800;text-transform:uppercase;color:#555;margin-bottom:3px}
 .invoice-meta-box .v{font-size:11px;font-weight:700;line-height:1.2}
@@ -176,6 +176,55 @@ thead th,
   line-height: 1.05 !important;
 }
 
+
+.invoice-doc{font-family:Arial,Helvetica,sans-serif;color:#111;padding:0.2in}
+.invoice-doc-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}
+.invoice-doc-title{font-size:24px;font-weight:800}
+.invoice-doc-sub{font-size:12px;color:#333;line-height:1.35}.invoice-doc-sub strong{color:#102131}
+.invoice-address-grid{display:grid;grid-template-columns:1.1fr 1.1fr .8fr;gap:10px;margin:12px 0}
+.invoice-address-box{border:1px solid #cfd8e3;border-radius:8px;padding:10px}
+.invoice-address-box .k{font-size:10px;font-weight:800;text-transform:uppercase;color:#526476;margin-bottom:4px}
+.invoice-address-box .v{font-size:12px;line-height:1.35}
+.invoice-banner{margin:10px 0 12px;padding:8px 10px;border:2px solid #173a5c;background:#eef6ff;border-radius:8px;font-size:12px;font-weight:700}
+.invoice-split-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:10px 0 16px}
+.invoice-split-box{border:2px solid #173a5c;border-radius:10px;padding:10px;background:#fbfdff}
+.invoice-split-box h3{margin:0 0 8px;font-size:14px;color:#173a5c}
+.invoice-split-box p{margin:0;font-size:11px;line-height:1.35}
+.invoice-doc .section-title{margin:14px 0 8px;font-size:14px;font-weight:800;color:#173a5c}
+
+
+.print-page-footer{
+  position:fixed;
+  bottom:0.08in;
+  right:0.18in;
+  font-size:10px;
+  color:#333;
+}
+.print-page-footer::after{
+  content:"Page " counter(page);
+}
+.invoice-top-right{
+  font-size:12px;
+  line-height:1.35;
+}
+.invoice-top-right strong{
+  color:#102131;
+}
+.invoice-doc-title-block{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.invoice-doc-kicker{
+  font-size:18px;
+  font-weight:800;
+  color:#173a5c;
+}
+.invoice-doc-title{
+  font-size:18px;
+  font-weight:800;
+}
+
 </style>
 </head>
 <body>
@@ -190,6 +239,7 @@ thead th,
       <button id="reloadBtn" class="primary">Load Live USAC Data</button>
       <button id="printBtn">Print to PDF</button>
       <button id="invoiceBtn">Print Reconcile Doc</button>
+      <button id="createInvoiceBtn">Create Invoice</button>
       <button id="emailBtn">Email</button>
       <button id="clearBtn">Clear Filters</button>
       <button id="exportBtn">Export Filtered CSV</button>
@@ -279,6 +329,7 @@ function money(n){ return new Intl.NumberFormat('en-US',{style:'currency',curren
 function money0(n){ return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n||0)); }
 function intFmt(n){ return new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(n||0)); }
 function simpleDate(v){ if(!v) return ''; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
+function todayString(){ return new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}); }
 function unique(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b))); }
 function statusClass(s){ const t=String(s||'').toLowerCase(); if(/(commit|fund|approved|granted)/.test(t)) return 'good'; if(/(pending|review|certified|submitted)/.test(t)) return 'warn'; if(/(denied|rejected|cancel)/.test(t)) return 'bad'; return ''; }
 function toObjects(payload){
@@ -571,10 +622,10 @@ function renderCard(g){
         <div class="kpi"><div class="k">Version</div><div class="v">${escapeHtml(g.versionLabel || '')}</div></div>
         <div class="kpi"><div class="k">Revised Date</div><div class="v">${escapeHtml(g.revisedDateLabel || '')}</div></div>
       </div>
-      <div class="note">Analysis: ${escapeHtml(note)}</div><div style="padding:8px 12px 0"><button class="invoice-card-btn" data-card-key="${escapeHtml(g.key)}">Print This Reconcile Doc</button></div>
+      <div class="note">Analysis: ${escapeHtml(note)}</div><div style="padding:8px 12px 0;display:flex;gap:8px;flex-wrap:wrap"><button class="invoice-card-btn" data-card-key="${escapeHtml(g.key)}">Print This Reconcile Doc</button><button class="create-invoice-card-btn" data-card-key="${escapeHtml(g.key)}">Create Invoice</button></div>
       ${g.frns.map(renderFrnBlock).join('')}
       <section class="frn-block">
-        <div class="frn-head">Card Grand Total</div>
+        <div class="frn-head">${escapeHtml(g.participant || "Participant")} Grant Total</div>
         <div class="table-wrap">
           <table class="resizable">
             <tbody>
@@ -691,6 +742,7 @@ function renderFrnBlock(f){
       <div class="frn-box"><div class="k">Invoicing Method</div><div class="v">${escapeHtml(f.invoiceMethod || '')}</div></div>
       <div class="frn-box"><div class="k">FCDL Date</div><div class="v">${escapeHtml(simpleDate(f.fcdlDate) || '')}</div></div>
       <div class="frn-box"><div class="k">Revised FCDL Date</div><div class="v">${escapeHtml(simpleDate(f.revisedFcdlDate) || '')}</div></div>
+      <div class="frn-box"><div class="k">Invoice Deadline Date</div><div class="v">${escapeHtml(simpleDate(f.invoiceDeadline) || '')}</div></div>
     </div>
     ${renderDiscrepancyBox(f)}
     <div class="table-wrap">
@@ -866,6 +918,7 @@ function renderInvoiceTableRows(rows, visibleKeys){
       <td>${escapeHtml(r.lineMake || '')}</td>
       <td>${escapeHtml(r.lineModel || '')}</td>
       <td>${escapeHtml(r.lineType || '')}</td>
+      <td>${escapeHtml(simpleDate(r.serviceStart) || '')}</td>
       <td class="num">${qty ? intFmt(qty) : ''}</td>
       <td class="num">${r.months ? intFmt(r.months) : ''}</td>
       ${amountCell(r.monthlyProduct, visibleKeys, 'monthlyProduct')}
@@ -886,6 +939,192 @@ function renderInvoiceTableRows(rows, visibleKeys){
     </tr>`;
   }).join('');
 }
+
+
+function safeFilePart(s){
+  return String(s || '').replace(/[\\\/:*?"<>|]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function getInvoiceContext(group){
+  const keyBase = `invoice_ctx_${group.form471 || group.participant || 'group'}`;
+  const today = todayString();
+  const saved = {
+    spiNumber: localStorage.getItem(keyBase + '_spi') || '',
+    invoiceNumber: localStorage.getItem(keyBase + '_inv') || '',
+    originalCustomerInvoiceDate: localStorage.getItem(keyBase + '_cust_date') || today,
+    originalSpiDate: localStorage.getItem(keyBase + '_orig_spi_date') || today,
+    revisedSpiDate: localStorage.getItem(keyBase + '_rev_spi_date') || today
+  };
+  const spiNumber = prompt('Enter SPI number for the invoice output.', saved.spiNumber) ?? saved.spiNumber;
+  const invoiceNumber = prompt('Enter invoice number for the invoice output.', saved.invoiceNumber) ?? saved.invoiceNumber;
+  const originalCustomerInvoiceDate = prompt('Enter Original Customer Invoice Date.', saved.originalCustomerInvoiceDate) ?? saved.originalCustomerInvoiceDate;
+  const originalSpiDate = prompt('Enter Original SPI Date.', saved.originalSpiDate) ?? saved.originalSpiDate;
+  const revisedSpiDate = prompt('Enter Revised SPI Date.', saved.revisedSpiDate) ?? saved.revisedSpiDate;
+
+  const ctx = { spiNumber, invoiceNumber, originalCustomerInvoiceDate, originalSpiDate, revisedSpiDate };
+  localStorage.setItem(keyBase + '_spi', spiNumber);
+  localStorage.setItem(keyBase + '_inv', invoiceNumber);
+  localStorage.setItem(keyBase + '_cust_date', originalCustomerInvoiceDate);
+  localStorage.setItem(keyBase + '_orig_spi_date', originalSpiDate);
+  localStorage.setItem(keyBase + '_rev_spi_date', revisedSpiDate);
+  return ctx;
+}
+
+function renderInvoiceDoc(group, ctx){
+  const customerShare = participantShare10(group.eligibleLineTotal);
+  const usacShare = fundedShare90(group.eligibleLineTotal);
+  const frnSections = group.frns.map(f => {
+    const visibleKeys = getVisibleAmountColumns(f.rows);
+    return `
+      <div class="section-title">FRN ${escapeHtml(f.frn)}</div>
+      <div class="invoice-meta">
+        <div class="invoice-meta-box"><div class="k">FCC Form 470 Number</div><div class="v">${escapeHtml(f.form470 || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">FCDL Date</div><div class="v">${escapeHtml(simpleDate(f.fcdlDate) || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">Invoice Deadline Date</div><div class="v">${escapeHtml(simpleDate(f.invoiceDeadline) || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">SPI Number</div><div class="v">${escapeHtml(ctx.spiNumber || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">Revised Date</div><div class="v">${escapeHtml(simpleDate(f.revisedFcdlDate) || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">Reported Pre-Discount Eligible</div><div class="v">${money(f.totalPreDiscountEligible)}</div></div>
+        <div class="invoice-meta-box"><div class="k">Reported Requested Amount</div><div class="v">${money(f.requestedAmount)}</div></div>
+        <div class="invoice-meta-box"><div class="k">Reported Current Committed</div><div class="v">${money(f.committedAmount)}</div></div>
+        <div class="invoice-meta-box"><div class="k">Reported Participant Non-Discount</div><div class="v">${money(f.totalParticipantNonDiscount)}</div></div>
+      </div>
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>Line Item</th><th>Make</th><th>Model / Service</th><th>Type</th><th>Product Delivery Date</th><th>Qty</th><th>Months</th>
+            ${amountHeader('Monthly Product / Service', visibleKeys, 'monthlyProduct')}
+            ${amountHeader('Monthly Install / Config', visibleKeys, 'monthlyInstall')}
+            ${amountHeader('Monthly Tax', visibleKeys, 'monthlyTax')}
+            ${amountHeader('Monthly Ineligible', visibleKeys, 'monthlyIneligible')}
+            ${amountHeader('Monthly Eligible', visibleKeys, 'monthlyEligible')}
+            ${amountHeader('Source Total Eligible Monthly', visibleKeys, 'totalEligibleMonthly')}
+            ${amountHeader('One-Time Product / Service', visibleKeys, 'oneTimeProduct')}
+            ${amountHeader('One-Time Install / Config', visibleKeys, 'oneTimeInstall')}
+            ${amountHeader('One-Time Tax', visibleKeys, 'oneTimeTax')}
+            ${amountHeader('One-Time Ineligible', visibleKeys, 'oneTimeIneligible')}
+            ${amountHeader('One-Time Eligible', visibleKeys, 'oneTimeEligible')}
+            ${amountHeader('Source Total Eligible One-Time', visibleKeys, 'totalEligibleOneTime')}
+            ${amountHeader('Line Total from Source Total Fields', visibleKeys, 'eligibleLineTotal')}
+            <th class="invoice-head">USAC (90%)</th>
+            <th class="invoice-head">Participant (10%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${renderInvoiceTableRows(f.rows, visibleKeys)}
+          <tr class="invoice-total-row">
+            <td colspan="7">FRN subtotal</td>
+            ${amountCell(f.rows.reduce((s,r)=>s+r.monthlyProduct,0), visibleKeys, 'monthlyProduct')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.monthlyInstall,0), visibleKeys, 'monthlyInstall')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.monthlyTax,0), visibleKeys, 'monthlyTax')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.monthlyIneligible,0), visibleKeys, 'monthlyIneligible')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.monthlyEligible,0), visibleKeys, 'monthlyEligible')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.totalEligibleMonthly,0), visibleKeys, 'totalEligibleMonthly')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.oneTimeProduct,0), visibleKeys, 'oneTimeProduct')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.oneTimeInstall,0), visibleKeys, 'oneTimeInstall')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.oneTimeTax,0), visibleKeys, 'oneTimeTax')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.oneTimeIneligible,0), visibleKeys, 'oneTimeIneligible')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.oneTimeEligible,0), visibleKeys, 'oneTimeEligible')}
+            ${amountCell(f.rows.reduce((s,r)=>s+r.totalEligibleOneTime,0), visibleKeys, 'totalEligibleOneTime')}
+            ${amountCell(f.eligibleLineTotal, visibleKeys, 'eligibleLineTotal')}
+            <td class="num invoice-col usac-col">${money(fundedShare90(f.eligibleLineTotal))}</td>
+            <td class="num invoice-col participant-col">${money(participantShare10(f.eligibleLineTotal))}</td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Invoice</title>
+    <style>${document.querySelector('style').textContent}</style>
+  </head>
+  <body class="invoice-doc">
+    <div class="invoice-doc-header">
+      <div class="invoice-doc-title-block">
+        <div class="invoice-doc-kicker">SOLUTIONZ</div>
+        <div class="invoice-doc-title">E-Rate Cybersecurity Pilot Program Invoice${ctx.invoiceNumber ? ` # ${escapeHtml(ctx.invoiceNumber)}` : ''}</div>
+      </div>
+      <div class="invoice-top-right">
+        <div><strong>Participant Name:</strong> ${escapeHtml(group.participant || '')}</div>
+        <div><strong>Service Provider(s):</strong> ${escapeHtml(group.provider || '')}${group.spin ? ` (SPIN: ${escapeHtml(group.spin)})` : ''}</div>
+        <div><strong>Application Status:</strong> ${escapeHtml(group.applicationStatusLabel || '')}</div>
+        <div><strong>FCDL Version:</strong> ${escapeHtml(group.revisedDateLabel ? `Revised ${group.revisedDateLabel}` : group.versionLabel || '')}</div>
+        <div><strong>Original Customer Invoice Date:</strong> ${escapeHtml(ctx.originalCustomerInvoiceDate || '')}</div>
+        <div><strong>Original SPI Date:</strong> ${escapeHtml(ctx.originalSpiDate || '')}${ctx.spiNumber ? ` ${escapeHtml(ctx.spiNumber)}` : ''}</div>
+        <div><strong>Revised SPI Date:</strong> ${escapeHtml(ctx.revisedSpiDate || '')}</div>
+      </div>
+    </div>
+
+    <div class="invoice-address-grid">
+      <div class="invoice-address-box">
+        <div class="k">Please remit payment to</div>
+        <div class="v">ATTN: Accounts Receivable<br>Solutionz, Inc.<br>PO Box 671420<br>Dallas TX 75267-1420</div>
+      </div>
+      <div class="invoice-address-box">
+        <div class="k">Bill To / Participant</div>
+        <div class="v">${escapeHtml(group.participant || '')}<br>${escapeHtml(group.state || '')}</div>
+      </div>
+      <div class="invoice-address-box">
+        <div class="k">Invoice Total</div>
+        <div class="v"><strong>${money(group.eligibleLineTotal)}</strong></div>
+      </div>
+    </div>
+
+    <div class="invoice-banner">This invoice view separates the USAC SPI invoice portion from the Customer invoice portion while preserving the detailed line-item breakdown.</div>
+
+    <div class="invoice-split-grid">
+      <div class="invoice-split-box">
+        <h3>USAC SPI Invoice Portion</h3>
+        <p>Use the <strong>USAC (90%)</strong> column and the FRN-level reported requested / committed values to support SPI invoice preparation. This section is intended for the USAC reimbursement portion.</p>
+        <p style="margin-top:8px"><strong>USAC Total (90%):</strong> ${money(usacShare)}</p>
+      </div>
+      <div class="invoice-split-box">
+        <h3>Customer Invoice Portion</h3>
+        <p>Use the <strong>Participant (10%)</strong> column for the customer-share billing portion. This section is intended for the billed entity or participant customer invoice.</p>
+        <p style="margin-top:8px"><strong>Customer Total (10%):</strong> ${money(customerShare)}</p>
+      </div>
+    </div>
+
+    ${frnSections}
+
+    <div class="section-title">${escapeHtml(group.participant || 'Participant')} Grant Total</div>
+    <table class="invoice-table">
+      <tbody>
+        <tr class="invoice-total-row">
+          <td colspan="2"><strong>Customer Invoice Grand Total</strong></td>
+          <td class="num invoice-col participant-col grand-total-10">${money(customerShare)}</td>
+          <td><strong>USAC SPI Grand Total</strong></td>
+          <td class="num invoice-col usac-col grand-total-90">${money(usacShare)}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="print-page-footer"></div>
+  </body>
+  </html>`;
+}
+function openCreateInvoice(cardKey){
+  const group = state.filteredGroups.find(g => g.key === cardKey) || state.groups.find(g => g.key === cardKey) || state.filteredGroups[0] || state.groups[0];
+  if(!group){ alert('No card available to create invoice.'); return; }
+
+  const w = window.open('', '_blank');
+  if(!w){
+    alert('Popup blocked. Please allow popups for this site and try again.');
+    return;
+  }
+
+  const ctx = getInvoiceContext(group);
+  const fileTitle = `${safeFilePart(group.participant || 'Participant')} ${safeFilePart(ctx.spiNumber || 'SPI')} Invoice`;
+
+  w.document.open();
+  w.document.write(renderInvoiceDoc(group, ctx));
+  w.document.close();
+  try{ w.document.title = fileTitle; }catch(e){}
+  w.focus();
+  setTimeout(()=>{ try{ w.print(); }catch(e){} }, 400);
+}
+
 function renderInvoiceTemplate(group){
   const frnSections = group.frns.map(f => {
     const visibleKeys = invoiceColsForRows(f.rows);
@@ -902,6 +1141,7 @@ function renderInvoiceTemplate(group){
         <div class="invoice-meta-box"><div class="k">Reported Participant Non-Discount</div><div class="v">${money(f.totalParticipantNonDiscount)}</div></div>
         <div class="invoice-meta-box"><div class="k">FCDL Date</div><div class="v">${escapeHtml(simpleDate(f.fcdlDate) || '')}</div></div>
         <div class="invoice-meta-box"><div class="k">Revised Date</div><div class="v">${escapeHtml(simpleDate(f.revisedFcdlDate) || '')}</div></div>
+        <div class="invoice-meta-box"><div class="k">Invoice Deadline Date</div><div class="v">${escapeHtml(simpleDate(f.invoiceDeadline) || '')}</div></div>
       </div>
       <table class="invoice-table">
         <thead>
@@ -946,8 +1186,7 @@ function renderInvoiceTemplate(group){
           </tr>
         </tbody>
       </table>
-      ${renderDiscrepancyBox(f)}
-    `;
+          `;
   }).join('');
 
   return `<!DOCTYPE html>
@@ -1048,6 +1287,7 @@ el('reloadBtn').addEventListener('click', fetchLive);
 el('exportBtn').addEventListener('click', exportCsv);
 el('printBtn').addEventListener('click', ()=> window.print());
 el('invoiceBtn').addEventListener('click', ()=> openInvoiceTemplate());
+el('createInvoiceBtn').addEventListener('click', ()=> openCreateInvoice());
 el('emailBtn').addEventListener('click', ()=>{
   const subject = encodeURIComponent('E-Rate Cybersecurity Pilot Reconcile Doc');
   const body = encodeURIComponent(window.location.href);
